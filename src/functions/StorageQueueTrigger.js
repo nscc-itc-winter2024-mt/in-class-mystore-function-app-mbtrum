@@ -23,29 +23,39 @@ app.storageQueue('StorageQueueTrigger', {
             }
         }
 
+        // Function to insert record
         async function insertRecord() {
 
             try {
-                // connect to db
-                const pool = await sql.connect(config);
+                
+                // Database connect (pooled connection)
+                const pool = await sql.connect(sqlConfig);
 
-                // create a request
+                // Create a sql "request" object
                 const request = pool.request();
 
-                // Add params to command
+                // Parameterize inputs
                 request.input('FirstName', sql.VarChar(255), queueItem.FirstName);
                 request.input('LastName', sql.VarChar(255), queueItem.LastName);
 
-                // create sql statement
+                // Insert record into table
+                const insertRows = await request.query('INSERT INTO Test (FirstName, LastName) VALUES (@FirstName, @LastName)');
 
-                // close the connection pool
+                // Get the primary key of the row inserted
+                const insertResult = await request.query('SELECT @@IDENTITY as InsertId');
+                const primaryKey = insertResult.recordset[0].InsertId;
+
+                // Log the rows affected
+                console.log('Rows inserted: ' + insertRows.rowsAffected + ' Primary Key: ' + primaryKey);
+
                 pool.close();
             }
-            catch(err) {
-                console.log('An error occured saving to database.', err);
+            catch (err) {
+                console.log("Database error, err");
             }
-
         }
+
+        insertRecord();
 
     }
 });
